@@ -1,0 +1,22 @@
+#include "receivingfileactionexecutor_parsemanual.h"
+
+
+#include <QDebug>
+
+
+ReceivingFileActionExecutor_ParseManual::ReceivingFileActionExecutor_ParseManual()
+{
+
+}
+
+ReceivingFileActionExecutor_ParseManual::~ReceivingFileActionExecutor_ParseManual()
+{
+
+}
+
+bool ReceivingFileActionExecutor_ParseManual::executeAction(ReceivingFileExecutionParameters *action_parameters)
+{
+    qDebug() << "ReceivingFileActionExecutor_ParseManual";
+    
+
+}

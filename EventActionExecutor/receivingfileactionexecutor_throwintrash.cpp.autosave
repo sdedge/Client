@@ -1,0 +1,55 @@
+#include "receivingfileactionexecutor_throwintrash.h"
+
+#include <QDebug>
+#include <QFile>
+#include <QFileInfo>
+
+
+ReceivingFileActionExecutor_ThrowInTrash::ReceivingFileActionExecutor_ThrowInTrash()
+{
+
+}
+
+ReceivingFileActionExecutor_ThrowInTrash::~ReceivingFileActionExecutor_ThrowInTrash()
+{
+
+}
+
+bool ReceivingFileActionExecutor_ThrowInTrash::executeAction(ReceivingFileExecutionParameters *action_parameters)
+{
+    qDebug() << "ReceivingFileActionExecutor_ThrowInTrash";
+    
+    QString variables_buffer = action_parameters->task_exec_parameters;
+    
+    replaceVariablesIn(variables_buffer);
+
+    QStringList arguments = variables_buffer.split(arguments_spacer);
+
+    QString file_path = arguments.at(0);
+
+    QFileInfo file_info(file_path);
+
+    QString trash_path = arguments.at(1) + file_info.fileName() + "_1";
+
+    bool success = false;
+
+    if(QFile::exists(file_path))                                                                                   //если исходный файл существует
+    {
+        QString postfix;
+        int i = 2;
+        while(QFile::exists(trash_path))                                                                               //если конечный файл уже существует
+        {
+            trash_path.chop(trash_path.size() - trash_path.lastIndexOf("_"));
+            postfix = "_" + QString::number(i);
+        }
+        if(QFile::copy(file_path, trash_path))                                                                 //если копирование удалось
+        {
+            if(QFile::remove(file_path))                                                   //если удалось удалить файл или файл не существует
+            {
+                success = true;                                                                                         //удаление прошло успешно
+            }                                                                                 //копирование прошло успешно
+        }
+    }
+
+    return success | action_parameters->skip;
+}

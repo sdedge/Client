@@ -1,0 +1,229 @@
+#include "receivingfileactionexecutor_makecontainer.h"
+
+
+#include <QDebug>
+
+#include "settings.h"
+#include <QProcess>
+
+
+ReceivingFileActionExecutor_MakeContainer::ReceivingFileActionExecutor_MakeContainer()
+{
+
+}
+
+ReceivingFileActionExecutor_MakeContainer::~ReceivingFileActionExecutor_MakeContainer()
+{
+
+}
+
+bool ReceivingFileActionExecutor_MakeContainer::executeAction(ReceivingFileExecutionParameters *action_parameters)
+{
+    qDebug() << "ReceivingFileActionExecutor_MakeContainer";
+    
+    QString variables_buffer = action_parameters->task_exec_parameters;
+    
+    replaceVariablesIn(variables_buffer);
+
+    QString settings_7_file_path = variables_buffer;
+
+    pack_settings = SettingsParsers::parseSettings7(settings_7_file_path);
+
+
+    if(pack_settings == nullptr)
+    {
+        return false;
+    }
+
+    QDir search_dir(pack_settings->search_dir_path);
+
+
+    QFile manual_file(pack_settings->manual_file_name);
+
+    if(manual_file.open(QIODevice::WriteOnly) != true)
+    {
+        qDebug() << "Не открылся " + manual_file.fileName();
+    }
+
+    manual_file.open(QIODevice::WriteOnly);
+
+    manual_file_writer = new QXmlStreamWriter(&manual_file);
+
+    manual_file_writer->setAutoFormatting(true);
+    manual_file_writer->writeStartElement("unpack_manual");
+
+        manual_file_writer->writeStartElement("pack_data_file");
+        manual_file_writer->writeAttribute("name", pack_settings->pack_data_file_name);
+        manual_file_writer->writeEndElement();
+
+        manual_file_writer->writeStartElement("unpack");
+        manual_file_writer->writeAttribute("path", pack_settings->search_dir_path);
+        manual_file_writer->writeEndElement();
+
+        manual_file_writer->writeStartElement("filter");
+        manual_file_writer->writeAttribute("path", pack_settings->filter_path);
+        manual_file_writer->writeEndElement();
+
+        manual_file_writer->writeStartElement("copy_to_filter");
+
+
+    //копирование файлов для упаковки в отдельную директорию и добавление информации в справку
+    if(pack_settings->search_algoritm_type == 0)
+    {
+        for(SettingsForPackFile *settings : pack_settings->settings_for_pack_files)
+        {
+            prioritySearch(search_dir, settings);
+        }
+    }
+    else if(pack_settings->search_algoritm_type == 1)
+    {
+        bruteSearch(search_dir);
+    }
+    else
+    {
+        qDebug() << "Неверный тип алгоритма поиска";
+        return false;
+    }
+
+
+        manual_file_writer->writeEndElement();
+
+    manual_file_writer->writeEndElement();
+
+    manual_file.close();
+
+    delete manual_file_writer;
+
+    QStringList pack_files_arguments;
+    pack_files_arguments.append(Settings::settings()->packKeys());
+    pack_files_arguments.append(" " + pack_settings->pack_data_file_name);
+    pack_files_arguments.append(" --exclude=" + pack_settings->manual_file_name);
+    pack_files_arguments.append(" " + pack_settings->search_dir_path);
+
+    QProcess archiver_process;
+    archiver_process.start(Settings::settings()->archiverPath(), pack_files_arguments);
+
+    while(!archiver_process.waitForFinished())
+    {
+        QEventLoop loop;                                                                //
+        QTimer timer;                                                                   //
+        timer.setInterval(1000);                                                        //   небольшая задержка, чтобы не грузить ЦП
+        connect (&timer, &QTimer::timeout, &loop, &QEventLoop::quit);                   //
+        timer.start();                                                                  //
+        loop.exec();                                                                    //
+    }
+
+    QStringList full_pack_arguments;
+    pack_files_arguments.append(Settings::settings()->packKeys());
+    pack_files_arguments.append(" " + pack_settings->pack_data_manual_file_name);
+    pack_files_arguments.append(" " + pack_settings->search_dir_path + pack_settings->manual_file_name);
+    pack_files_arguments.append(" " + pack_settings->pack_data_file_name);
+
+    archiver_process.start(Settings::settings()->archiverPath(), pack_files_arguments);
+
+    while(!archiver_process.waitForFinished())
+    {
+        QEventLoop loop;                                                                //
+        QTimer timer;                                                                   //
+        timer.setInterval(1000);                                                        //   небольшая задержка, чтобы не грузить ЦП
+        connect (&timer, &QTimer::timeout, &loop, &QEventLoop::quit);                   //
+        timer.start();                                                                  //
+        loop.exec();                                                                    //
+    }
+
+    delete pack_settings;
+    return true;
+}
+
+
+
+bool ReceivingFileActionExecutor_MakeContainer::bruteSearch(QDir dir)
+{
+    for(QFileInfo file_info : dir.entryInfoList(QDir::NoDotAndDotDot, QDir::NoSort))
+    {
+        if(file_info.isFile())
+        {
+            for(SettingsForPackFile *settings : pack_settings->settings_for_pack_files)
+            {
+                if(settings->file_name_reg_exp.exactMatch(file_info.fileName()))
+                {
+                    if(QFile::copy(file_info.canonicalFilePath(), pack_settings->pack_creation_dir_path + file_info.fileName()) != true)
+                    {
+                        qDebug() << "Ошибка при сборка упаковки. Не удалось скопировать файл " + file_info.canonicalFilePath() + " в директорию " + pack_settings->pack_creation_dir_path;
+                    }
+                    else
+                    {
+                        QString file_relative_path = file_info.absoluteFilePath().remove(dir.absolutePath());
+                        QStringList vars = settings->file_vars.split("\\s*|\\s*", QString::SkipEmptyParts);
+                        writeVarsForFile(file_relative_path, vars);
+                    }
+                }
+            }
+        }
+        else if(file_info.isDir())
+        {
+            QDir child_dir(file_info.canonicalFilePath());
+            bruteSearch(child_dir);
+        }
+    }
+    return true;
+}
+
+bool ReceivingFileActionExecutor_MakeContainer::prioritySearch(QDir dir, SettingsForPackFile *settings)
+{
+    for(QFileInfo file_info : dir.entryInfoList(QDir::NoDotAndDotDot, QDir::NoSort))
+    {
+        if(file_info.isFile())
+        {
+            if(settings->file_name_reg_exp.exactMatch(file_info.fileName()))
+            {
+                if(QFile::copy(file_info.canonicalFilePath(), pack_settings->pack_creation_dir_path + file_info.fileName()) != true)
+                {
+                    qDebug() << "Ошибка при сборка упаковки. Не удалось скопировать файл " + file_info.canonicalFilePath() + " в директорию " + pack_settings->pack_creation_dir_path;
+                }
+                else
+                {
+                    QString file_relative_path = file_info.absoluteFilePath().remove(dir.absolutePath());
+                    QStringList vars = settings->file_vars.split("\\s*|\\s*", QString::SkipEmptyParts);
+                    writeVarsForFile(file_relative_path, vars);
+                }
+            }
+        }
+        else if(file_info.isDir())
+        {
+            QDir child_dir(file_info.canonicalFilePath());
+            prioritySearch(child_dir, settings);
+        }
+    }
+    return true;
+}
+
+void ReceivingFileActionExecutor_MakeContainer::writeVarsForFile(QString file_relative_path, QStringList vars)
+{
+    manual_file_writer->writeStartElement("file");
+
+    manual_file_writer->writeAttribute("path", file_relative_path);
+
+    QString var_string;
+
+    for(QString var : vars)
+    {
+        QStringList var_parameters = var.split("\\s*,\\s*", QString::SkipEmptyParts);
+
+        QString var_type = var_parameters.at(0);
+        QString var_name = var_parameters.at(1);
+        QString var_begin_marker = var_parameters.at(2);
+
+        int index_of_begin_marker = file_relative_path.lastIndexOf(var_begin_marker);
+        int index_of_end_marker = file_relative_path.indexOf("/", index_of_begin_marker);
+
+        QString var_value = file_relative_path.mid(index_of_begin_marker, index_of_end_marker - index_of_begin_marker);
+
+        var_string += "|" + var_type + "," + var_name + "," + var_value;
+
+    }
+
+
+    manual_file_writer->writeAttribute("vars", var_string);
+    manual_file_writer->writeEndElement();
+}

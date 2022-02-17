@@ -1,0 +1,109 @@
+#include "receivingfileactionexecutor_parsefile.h"
+
+#include <QDebug>
+
+#include "settings.h"
+
+
+
+ReceivingFileActionExecutor_ParseFile::ReceivingFileActionExecutor_ParseFile()
+{
+
+}
+
+ReceivingFileActionExecutor_ParseFile::~ReceivingFileActionExecutor_ParseFile()
+{
+
+}
+
+bool ReceivingFileActionExecutor_ParseFile::executeAction(ReceivingFileExecutionParameters *action_parameters)
+{
+    qDebug() << "ReceivingFileActionExecutor_ParseFile";
+    
+    QString variables_buffer = action_parameters->task_exec_parameters;
+    
+    replaceVariablesIn(variables_buffer);
+
+    QString file_path = variables_buffer;
+
+    QString errorStr;
+    int errorLine;
+    int errorColumn;
+
+    QFile plan_file(file_path);
+    if(plan_file.exists())
+    {
+        QDomDocument plan_document;
+        if(!plan_document.setContent(&plan_file, true, &errorStr, &errorLine, &errorColumn))
+        {
+            QString error_text = "Ошибка при чтении файла настроек № 3: \n Строка "
+                                 + QString::number(errorLine) + ", символ " + QString::number(errorColumn) + "\n" +
+                                 errorStr;
+            qDebug() << error_text;
+        }
+        if(plan_document.documentElement().tagName().toUpper() == Settings::settings()->planParseRules()->plan_tag.toUpper())
+        {
+            QDomElement root = plan_document.documentElement();
+            QDomNode work_program_node = root.firstChild();
+
+            WorkProgram *new_work_program =  new WorkProgram();
+
+            while(!work_program_node.isNull())
+            {
+                QString date_time_format = "dd.MM.yyyy hh:mm:ss";
+                if(work_program_node.toElement().tagName().toUpper() == Settings::settings()->planParseRules()->work_program_tag.toUpper())
+                {
+                    new_work_program->index = work_program_node.toElement().attribute(Settings::settings()->planParseRules()->work_program_parameter_index).toInt();
+                    new_work_program->begin_time = QDateTime::fromString(work_program_node.toElement().attribute(Settings::settings()->planParseRules()->work_program_parameter_begin_time), date_time_format);
+                    new_work_program->end_time = QDateTime::fromString(work_program_node.toElement().attribute(Settings::settings()->planParseRules()->work_program_parameter_end_time), date_time_format);
+
+                    QDomNode seance_node = work_program_node.firstChild();
+
+                    while(!seance_node.isNull())
+                    {
+                        if(seance_node.toElement().tagName().toUpper() == Settings::settings()->planParseRules()->drop_tag.toUpper())
+                        {
+                            Drop *new_drop = new Drop();
+
+                            new_drop->drop_index = seance_node.toElement().attribute(Settings::settings()->planParseRules()->drop_parameter_drop_index).toInt();
+                            new_drop->circle_index = seance_node.toElement().attribute(Settings::settings()->planParseRules()->drop_parameter_circle_index).toInt();
+                            new_drop->begin_time = QDateTime::fromString(seance_node.toElement().attribute(Settings::settings()->planParseRules()->drop_parameter_begin_time), date_time_format);
+                            new_drop->end_time = QDateTime::fromString(seance_node.toElement().attribute(Settings::settings()->planParseRules()->drop_parameter_end_time), date_time_format);
+
+                            new_work_program->drops.append(new_drop);
+
+                        }
+                        else
+                        {
+                            QString error_text = "Ошибка при чтении файла плана: неверное имя тега секции сеанса. \n Строка "
+                                                 + QString::number(seance_node.lineNumber()) + ", символ " + QString::number(seance_node.columnNumber()) + ".";
+                            qDebug() << error_text;
+                        }
+                        seance_node = seance_node.nextSibling();
+                    }
+                }
+                else
+                {
+                    QString error_text = "Ошибка при чтении файла плана: неверное имя тега секции рабочей программы. \n Строка "
+                                         + QString::number(work_program_node.lineNumber()) + ", символ " + QString::number(work_program_node.columnNumber()) + ".";
+                    qDebug() << error_text;
+                }
+
+                Settings::settings()->timer()->insertNewWorkProgram(new_work_program);
+
+                work_program_node = work_program_node.nextSibling();
+            }
+
+        }
+        else
+        {
+            QString error_text = "Ошибка при чтении файла плана: неверное имя главного тега.";
+            qDebug() << error_text;
+        }
+    }
+    else
+    {
+        QString error_text = "Ошибка при чтении файла плана: файл плана отсутствует.";
+        qDebug() << error_text  << file_path;
+    }
+}

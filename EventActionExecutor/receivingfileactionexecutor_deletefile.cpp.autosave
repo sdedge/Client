@@ -1,0 +1,38 @@
+#include "receivingfileactionexecutor_deletefile.h"
+#include <QDebug>
+#include <QFile>
+
+
+ReceivingFileActionExecutor_DeleteFile::ReceivingFileActionExecutor_DeleteFile()
+{
+
+}
+
+ReceivingFileActionExecutor_DeleteFile::~ReceivingFileActionExecutor_DeleteFile()
+{
+
+}
+
+bool ReceivingFileActionExecutor_DeleteFile::executeAction(ReceivingFileExecutionParameters *action_parameters)
+{
+    
+    QString variables_buffer = action_parameters->task_exec_parameters;
+    
+    replaceVariablesIn(variables_buffer);
+
+    QString delete_path = variables_buffer;
+
+    qDebug() << QFile::exists(delete_path);
+    qDebug() << delete_path;
+
+
+
+    bool success = false;                                                                                    //возврат ошибки по-умолчанию
+
+    if(QFile::remove(delete_path) || (!QFile::exists(delete_path)))                                                   //если удалось удалить файл или файл не существует
+    {
+        success = true;                                                                                         //удаление прошло успешно
+    }
+
+    return success | action_parameters->skip;
+}

@@ -1,0 +1,31 @@
+#include "receivingfileactionexecutor_startscen.h"
+
+#include <QDebug>
+
+
+ReceivingFileActionExecutor_StartScen::ReceivingFileActionExecutor_StartScen()
+{
+
+}
+
+ReceivingFileActionExecutor_StartScen::~ReceivingFileActionExecutor_StartScen()
+{
+
+}
+
+bool ReceivingFileActionExecutor_StartScen::executeAction(ReceivingFileExecutionParameters *action_parameters)
+{
+    qDebug() << "ReceivingFileActionExecutor_StartScen";
+    
+    QString variables_buffer = action_parameters->task_exec_parameters;
+    
+    replaceVariablesIn(variables_buffer);
+    
+    QStringList arguments = variables_buffer.split(arguments_spacer);
+    
+    QString scen_path = arguments.at(0);
+     
+    QString wait_list_id = arguments.at(1);
+    
+    
+}

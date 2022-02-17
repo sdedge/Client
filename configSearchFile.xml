@@ -1,0 +1,10 @@
+<searchFileConfig>
+	<waitFile>
+		<var source = "C:/SPO_K/IN">
+		</var>
+	</waitFile>
+	<waitFile>
+		<var source = "C:/IN">
+		</var>
+	</waitFile>
+</searchFileConfig>

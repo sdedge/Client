@@ -1,0 +1,17 @@
+#ifndef RECEIVINGFILEACTIONEXECUTOR_PARSEMANUAL_H
+#define RECEIVINGFILEACTIONEXECUTOR_PARSEMANUAL_H
+
+#include <QObject>
+#include "eventactionexecutor.h"
+
+class ReceivingFileActionExecutor_ParseManual : public EventActionExecutor
+{
+    Q_OBJECT
+public:
+    ReceivingFileActionExecutor_ParseManual();
+    virtual ~ReceivingFileActionExecutor_ParseManual();
+    
+    virtual bool executeAction(ReceivingFileExecutionParameters *action_parameters) override;
+};
+
+#endif // RECEIVINGFILEACTIONEXECUTOR_PARSEMANUAL_H

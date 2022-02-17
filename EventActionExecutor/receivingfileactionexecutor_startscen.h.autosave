@@ -1,0 +1,17 @@
+#ifndef RECEIVINGFILEACTIONEXECUTOR_STARTSCEN_H
+#define RECEIVINGFILEACTIONEXECUTOR_STARTSCEN_H
+
+#include <QObject>
+#include "eventactionexecutor.h"
+
+class ReceivingFileActionExecutor_StartScen : public EventActionExecutor
+{
+    Q_OBJECT
+public:
+    ReceivingFileActionExecutor_StartScen();
+    virtual ~ReceivingFileActionExecutor_StartScen();
+    
+    virtual bool executeAction(ReceivingFileExecutionParameters *action_parameters) override;
+};
+
+#endif // RECEIVINGFILEACTIONEXECUTOR_STARTSCEN_H

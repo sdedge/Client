@@ -1,0 +1,13 @@
+INPUT(
+./debug\main.o
+./debug\mainwindow.o
+./debug\client.o
+./debug\autonomscen.o
+./debug\ipconf.o
+./debug\checkthread.o
+./debug\moc_mainwindow.o
+./debug\moc_client.o
+./debug\moc_autonomscen.o
+./debug\moc_ipconf.o
+./debug\moc_checkthread.o
+);

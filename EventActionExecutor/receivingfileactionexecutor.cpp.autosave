@@ -1,0 +1,57 @@
+#include "receivingfileactionexecutor.h"
+#include <QDebug>
+
+#include "settings.h"
+
+
+ReceivingFileActionExecutor::ReceivingFileActionExecutor()
+{
+    arguments_spacer.setPattern(("\\s*|\\s*"));
+}
+
+ReceivingFileActionExecutor::~ReceivingFileActionExecutor()
+{
+    
+}
+
+void ReceivingFileActionExecutor::setContext(QList<Variable *> context_variables)
+{
+    m_context_variables = context_variables;
+}
+
+
+bool ReceivingFileActionExecutor::replaceVariablesIn(QString &attribute)
+{
+    bool done_without_errors = true; //флаг отсутствия ошибок в процессе замены переменных
+    int first_variable_occurrence;
+    QRegExp variable_reg_exp("@*@");
+    //qDebug() << mainScens.first().args.keys();
+    if(attribute.contains(variable_reg_exp))
+    {
+        first_variable_occurrence = attribute.indexOf("@");
+        QString variable_name = attribute.mid(first_variable_occurrence + 1, attribute.indexOf("@", first_variable_occurrence + 1) - first_variable_occurrence - 1);
+        Variable *var = searchVar(variable_name);
+        if(var != nullptr) //проверка наличия переменной с таким именем
+        {
+            attribute.replace(first_variable_occurrence, var->name.size() + 2, var->value); //замена имени переменной на её значение
+            done_without_errors = replaceVariablesIn(attribute); //рекурсивный вызов, до тех пор, пока не будут заменены все переменные в атрибуте
+        }
+        else
+        {
+           qDebug() << "Не найдена переменная " << variable_name;
+           done_without_errors = false;
+        }
+    }
+    return done_without_errors;
+}
+
+Variable* ReceivingFileActionExecutor::searchVar(QString var_name)
+{
+    for (Variable* var: m_context_variables)
+    {
+        if(var->name == var_name)
+            return var;
+    }
+
+    return nullptr;
+}

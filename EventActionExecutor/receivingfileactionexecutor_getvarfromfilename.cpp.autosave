@@ -1,0 +1,42 @@
+#include "receivingfileactionexecutor_getvarfromfilename.h"
+
+#include <QDebug>
+
+
+#include "settings.h"
+
+
+ReceivingFileActionExecutor_GetVarFromFileName::ReceivingFileActionExecutor_GetVarFromFileName()
+{
+
+}
+
+ReceivingFileActionExecutor_GetVarFromFileName::~ReceivingFileActionExecutor_GetVarFromFileName()
+{
+
+}
+
+bool ReceivingFileActionExecutor_GetVarFromFileName::executeAction(ReceivingFileExecutionParameters *action_parameters)
+{
+
+    qDebug() << "ReceivingFileActionExecutor_GetVarFromFileName";
+    
+    QString variables_buffer = action_parameters->task_exec_parameters;
+    
+    replaceVariablesIn(variables_buffer);
+
+    QStringList arguments = variables_buffer.split(arguments_spacer);
+
+    QString var_name = arguments.at(0);
+
+    QString start_marker = arguments.at(1);
+
+    QString finish_marker = arguments.at(2);
+
+    QString file_name = searchVar(Settings::settings()->getVarNameForMessageFileName())->value;
+
+    int start_var_position = file_name.lastIndexOf(start_marker);
+    int finish_var_position = file_name.lastIndexOf(start_marker);
+
+    return Settings::settings()->setValueToVar(var_name, file_name.mid(start_var_position,finish_var_position - start_var_position));
+}

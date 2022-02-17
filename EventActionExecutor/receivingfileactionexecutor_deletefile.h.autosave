@@ -1,0 +1,17 @@
+#ifndef RECEIVINGFILEACTIONEXECUTOR_DELETEFILE_H
+#define RECEIVINGFILEACTIONEXECUTOR_DELETEFILE_H
+
+#include <QObject>
+#include "eventactionexecutor.h"
+
+class ReceivingFileActionExecutor_DeleteFile : public EventActionExecutor
+{
+    Q_OBJECT
+public:
+    ReceivingFileActionExecutor_DeleteFile();
+    virtual ~ReceivingFileActionExecutor_DeleteFile();
+    
+    virtual bool executeAction(ReceivingFileExecutionParameters *action_parameters) override;
+};
+
+#endif // RECEIVINGFILEACTIONEXECUTOR_DELETEFILE_H

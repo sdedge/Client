@@ -1,0 +1,20 @@
+#ifndef ACTIONEXECUTOR_H
+#define ACTIONEXECUTOR_H
+
+#include <QObject>
+
+#include "settings.h"
+
+class ActionExecutor : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ActionExecutor();
+    
+    virtual bool executeAction(ReceivingFileExecutionParameters action_parameters) = 0;
+
+signals:
+
+};
+
+#endif // ACTIONEXECUTOR_H
